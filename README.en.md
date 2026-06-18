@@ -361,6 +361,19 @@ Before the formal paper or preprint is published, please cite this preliminary d
 
 **BUG423. "ModeMoEIO: Motion-Mode-Conditioned Mixture-of-Experts for Learning-Based Inertial Odometry." Preliminary Working Paper, version 0.1.0, 2026. GitHub repository: BUG423/moe-io.**
 
+BibTeX format:
+
+```bibtex
+@misc{bug423_modemoeio_2026,
+  author       = {BUG423},
+  title        = {{ModeMoEIO}: Motion-Mode-Conditioned Mixture-of-Experts for Learning-Based Inertial Odometry},
+  year         = {2026},
+  publisher    = {GitHub},
+  url          = {https://github.com/BUG423/moe-io},
+  note         = {Preliminary Working Paper, version 0.1.0}
+}
+```
+
 If you have used the motion-mode-conditioned expert design, training-phase motion mode pseudo-supervision, four-mode expert partitioning, or related technical approaches from this work, please clearly cite this repository and the specific version used in your paper, report, project documentation, or public implementation.
 
 After the formal paper is published, this section will be updated to the standard citation format of the corresponding publication.
