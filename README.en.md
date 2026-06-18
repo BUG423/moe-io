@@ -18,7 +18,7 @@
 
 Learning-based inertial odometry typically employs a single neural network to directly map fixed-length windows of inertial measurements into velocity, displacement, or relative motion states. However, real pedestrian motion exhibits significant mode heterogeneity: stationary, steady straight-line, turning, and transitional movements induced by starting/stopping, acceleration/deceleration, and posture changes all differ markedly in signal distribution, motion constraints, and regression difficulty. Using a single set of regression parameters to uniformly model all motion states may lead to gradient conflicts between different motion modes, causing the network to learn cross-mode average mappings and thereby weakening its ability to express local motion patterns.
 
-To address this, we propose **ModeMoEIO**, a motion-mode-conditioned mixture-of-experts framework for learning-based inertial odometry. The method first uses a shared temporal encoder to extract unified motion representations from inertial measurement windows, then employs a gating network to estimate soft weights for each sample across different motion modes. Multiple independent velocity experts separately learn local mappings for stationary, straight-line, turning, and transitional motion, with expert predictions continuously fused through gating weights. To promote expert specialization without人工 motion mode annotations, we design training-phase motion mode pseudo-labels: samples are partitioned into four basic motion states based on target horizontal velocity and mean yaw angular velocity, with an auxiliary classification loss supervising the gating network. A load-balancing constraint is further introduced to mitigate expert collapse commonly observed during mixture-of-experts training. During inference, no target velocity or人工 rules are required; the model autonomously completes expert assignment and velocity prediction based solely on inertial features.
+To address this, we propose **ModeMoEIO**, a motion-mode-conditioned mixture-of-experts framework for learning-based inertial odometry. The method first uses a shared temporal encoder to extract unified motion representations from inertial measurement windows, then employs a gating network to estimate soft weights for each sample across different motion modes. Multiple independent velocity experts separately learn local mappings for stationary, straight-line, turning, and transitional motion, with expert predictions continuously fused through gating weights. To promote expert specialization without manual motion mode annotations, we design training-phase motion mode pseudo-labels: samples are partitioned into four basic motion states based on target horizontal velocity and mean yaw angular velocity, with an auxiliary classification loss supervising the gating network. A load-balancing constraint is further introduced to mitigate expert collapse commonly observed during mixture-of-experts training. During inference, no target velocity or manual rules are required; the model autonomously completes expert assignment and velocity prediction based solely on inertial features.
 
 Preliminary validation suggests that motion-mode-conditioned modeling has the potential to improve local velocity regression and complex motion adaptability. This paper is currently published as an early research disclosure; subsequent work will complete systematic benchmarking, ablation studies, expert specialization analysis, and cross-dataset generalization evaluation.
 
@@ -36,7 +36,7 @@ Nevertheless, most existing learning-based inertial odometry methods still proce
 
 Mixture-of-experts models provide a natural solution path for this problem. The core idea is to divide the complex input space into several local sub-regions, with different experts learning local mappings and a gating network dynamically combining expert outputs based on input. Compared to a single network, mixture-of-experts can maintain shared feature extraction capability while preserving relatively independent parameter spaces for different motion modes.
 
-Based on this observation, we propose ModeMoEIO. Its core is not simply adding multiple regression heads, but introducing interpretable motion mode priors into the expert routing process: during training, weak supervision labels constructed from velocity and yaw angular velocity guide the gating network to distinguish stationary, straight-line, turning, and transitional motion; during inference, all rule dependencies are removed, with the model autonomously determining expert combinations. The main ideas can be summarized as:
+Based on this observation, we propose ModeMoEIO. Its core is not simply adding multiple regression heads, but introducing interpretable motion mode priors into the expert routing process: during training, weak supervision labels constructed from velocity and yaw angular velocity guide the gating network to distinguish stationary, straight-line, turning, and transitional motion; during inference, all rule dependencies are removed, with the model autonomously determining expert combinations. The main contributions can be summarized as:
 
 1. Reformulating learning-based inertial odometry as a conditional regression problem with motion mode heterogeneity;
 2. Using a shared temporal encoder with multiple independent velocity experts to balance shared representation and mode specialization;
@@ -124,7 +124,7 @@ $$
 
 where $E_{\theta}$ denotes a one-dimensional temporal encoding network with parameters $\theta$. The encoder is responsible for extracting basic information that different motion modes commonly depend on, such as local frequency structure, angular velocity changes, short-term dynamic responses, and cross-channel coupling relationships.
 
-Using a shared encoder rather than configuring complete independent backbones for each expert has two considerations. First, different motion modes still share a large amount of underlying inertial features; completely independent encoding would cause unnecessary parameter redundancy. Second, shared representations allow the gating and experts to be built in the same feature space, facilitating stable joint optimization.
+Using a shared encoder rather than configuring fully independent backbones for each expert is motivated by two considerations. First, different motion modes still share a large amount of underlying inertial features; completely independent encoding would introduce unnecessary parameter redundancy. Second, shared representations allow the gating and experts to be built in the same feature space, facilitating stable joint optimization.
 
 ### 3.4 Motion Mode Definition and Pseudo-Labels
 
@@ -157,7 +157,7 @@ $$
 y_{\mathrm{mode}}\in\{1,\dots,K\}.
 $$
 
-These labels do not participate in inference; they serve as training-phase weak supervision signals to help the gating network more quickly establish routing structures related to actual motion states.
+These labels are not used during inference; they serve as training-phase weak supervision signals to help the gating network quickly establish routing structures aligned with actual motion states.
 
 ### 3.5 Motion Mode Gating
 
@@ -321,7 +321,7 @@ To verify whether experts truly learn different dynamic patterns, subsequent wor
 
 This method still faces several potential issues.
 
-First, motion mode labels constructed based on thresholds may not fully describe real motion dynamics, particularly in complex scenarios such as running, stair climbing, lateral movement, and剧烈 device shaking. Second, experts may only differ at the parameter level without forming stable semantic specialization. Third, simple load-balancing may conflict with real non-uniform motion distributions. Finally, performance improvements may stem from increased parameter count rather than motion mode modeling itself, so they must be verified through parameter-matched baselines and comprehensive ablation studies.
+First, motion mode labels constructed based on thresholds may not fully describe real motion dynamics, particularly in complex scenarios such as running, stair climbing, lateral movement, and violent device shaking. Second, experts may only differ at the parameter level without forming stable semantic specialization. Third, simple load-balancing may conflict with real non-uniform motion distributions. Finally, performance improvements may stem from increased parameter count rather than motion mode modeling itself, so they must be verified through parameter-matched baselines and comprehensive ablation studies.
 
 ---
 
@@ -329,7 +329,7 @@ First, motion mode labels constructed based on thresholds may not fully describe
 
 The core assumption of ModeMoEIO is that motion states in inertial odometry are not a single homogeneous distribution, but rather consist of multiple sub-distributions with different local patterns. From this perspective, the value of expert mechanisms lies not in simply increasing model capacity, but in providing separable parameter spaces for different dynamic states.
 
-Motion mode pseudo-labels have both advantages and limitations. Their advantage lies in requiring no additional manual annotation and in connecting gating behavior with interpretable motion states; their limitation is that the rules are merely a coarse approximation of the continuous motion space. Future work can further investigate learnable motion prototypes, hierarchical motion states, continuous latent variable routing, or joint training of rule-based and unsupervised routing.
+Motion mode pseudo-labels have both advantages and limitations. Their advantage lies in requiring no additional manual annotation and in connecting gating behavior to interpretable motion states; their limitation is that the rules are merely a coarse approximation of the continuous motion space. Future work may further investigate learnable motion prototypes, hierarchical motion states, continuous latent variable routing, or joint training of rule-based and unsupervised routing.
 
 Another important issue is expert granularity. Four basic modes facilitate establishing a clear early verification framework, but this does not mean they represent the optimal partition. Finer-grained experts could cover running, stair climbing, lateral movement, sharp turns, and different carrying methods; however, increasing expert count may also cause insufficient training samples, routing instability, and model complexity. How to balance interpretability, data scale, and prediction performance is a key question for subsequent work.
 
@@ -387,4 +387,4 @@ After the formal paper is published, this section will be updated to the standar
 
 ## Acknowledgments
 
-The early research concept organization, method structuring, and preliminary experiment planning of this paper were assisted by the author's self-built tool **PaperFlow**. PaperFlow helps the author transform initial ideas into structured research questions, method proposals, and verification plans. The scientific judgment, method design, experiment responsibility, originality claims, and final expressions in this paper are all the author's own.
+The early research concept organization, method structuring, and preliminary experiment planning of this paper were assisted by the author's self-built tool **PaperFlow**. PaperFlow helps the author translate initial ideas into structured research questions, method proposals, and verification plans. The scientific judgment, method design, experiment responsibility, originality claims, and final expressions in this paper are all the author's own.
