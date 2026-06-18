@@ -172,7 +172,7 @@ $$
 其中 $G_{\phi}$ 为参数为 $\phi$ 的门控函数。随后通过带温度参数的 Softmax 得到专家权重：
 
 $$
-\boldsymbol{\pi} = \operatorname{softmax} \left( \frac{\mathbf{z}}{\tau} \right),
+\boldsymbol{\pi} = \mathrm{softmax} \left( \frac{\mathbf{z}}{\tau} \right),
 $$
 
 其中：
@@ -222,7 +222,7 @@ $$
 门控网络通过交叉熵学习训练期伪标签：
 
 $$
-\mathcal{L}_{\mathrm{mode}} = \operatorname{CE} \left( \mathbf{z}, y_{\mathrm{mode}} \right).
+\mathcal{L}_{\mathrm{mode}} = \mathrm{CE} \left( \mathbf{z}, y_{\mathrm{mode}} \right).
 $$
 
 该损失并不要求运动模式规则完全描述真实动力学，而是提供一个具有物理可解释性的初始划分，使专家分工不必完全依赖无约束的自发竞争。

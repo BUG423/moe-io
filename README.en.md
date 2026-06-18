@@ -170,7 +170,7 @@ $$
 where $G_{\phi}$ is the gating function with parameters $\phi$. Expert weights are then obtained through softmax with a temperature parameter:
 
 $$
-\boldsymbol{\pi} = \operatorname{softmax} \left( \frac{\mathbf{z}}{\tau} \right),
+\boldsymbol{\pi} = \mathrm{softmax} \left( \frac{\mathbf{z}}{\tau} \right),
 $$
 
 where:
@@ -220,7 +220,7 @@ Here $\ell$ can adopt mean squared error, smooth $L_1$ loss, or other objectives
 The gating network learns training-phase pseudo-labels through cross-entropy:
 
 $$
-\mathcal{L}_{\mathrm{mode}} = \operatorname{CE} \left( \mathbf{z}, y_{\mathrm{mode}} \right).
+\mathcal{L}_{\mathrm{mode}} = \mathrm{CE} \left( \mathbf{z}, y_{\mathrm{mode}} \right).
 $$
 
 This loss does not require the motion mode rules to completely describe real dynamics, but provides an initial partition with physical interpretability, so that expert specialization does not need to rely entirely on unconstrained spontaneous competition.
