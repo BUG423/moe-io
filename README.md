@@ -1,5 +1,4 @@
-# moe-io
-基于混合专家模型的学习式惯性里程计。
+# ModeMoEIO
 
 > **Motion-Mode-Conditioned Mixture-of-Experts for Learning-based Inertial Odometry**  
 > 运动模式条件混合专家学习式惯性里程计
@@ -52,19 +51,19 @@ ModeMoEIO 的出发点是：
 
 ### 1. 问题定义
 
-给定一个长度为 \(T\) 的惯性测量窗口：
+给定一个长度为 $T$ 的惯性测量窗口：
 
-\[
+$$
 \mathbf{X}\in\mathbb{R}^{B\times C\times T},
-\]
+$$
 
-其中 \(B\) 为批大小，\(C\) 为 IMU 通道数，当前默认输入为六通道惯性信号。模型目标是预测对应的速度向量：
+其中 $B$ 为批大小，$C$ 为 IMU 通道数，当前默认输入为六通道惯性信号。模型目标是预测对应的速度向量：
 
-\[
+$$
 \hat{\mathbf{v}}\in\mathbb{R}^{B\times D},
-\]
+$$
 
-当前实现通常使用 \(D=3\)，即三维速度输出。
+当前实现通常使用 $D=3$，即三维速度输出。
 
 ---
 
@@ -72,11 +71,11 @@ ModeMoEIO 的出发点是：
 
 首先使用共享的一维残差网络编码 IMU 窗口：
 
-\[
+$$
 \mathbf{h}=E_{\theta}(\mathbf{X}),
-\]
+$$
 
-其中 \(E_{\theta}\) 由一维卷积、批归一化、ReLU、最大池化和多组一维残差块构成。编码结果经过全局自适应平均池化后得到固定维度特征 \(\mathbf{h}\)。
+其中 $E_{\theta}$ 由一维卷积、批归一化、ReLU、最大池化和多组一维残差块构成。编码结果经过全局自适应平均池化后得到固定维度特征 $\mathbf{h}$。
 
 共享编码器的作用是提取不同运动模式均可复用的基础惯性表征，避免为每个专家重复构建完整时序主干网络。
 
@@ -84,48 +83,48 @@ ModeMoEIO 的出发点是：
 
 ### 3. 运动模式门控
 
-门控网络根据共享特征生成 \(K\) 个专家的 logits：
+门控网络根据共享特征生成 $K$ 个专家的 logits：
 
-\[
+$$
 \mathbf{z}=G_{\phi}(\mathbf{h}),
-\]
+$$
 
 并通过带温度参数的 Softmax 转换为专家权重：
 
-\[
+$$
 \boldsymbol{\pi}
 =
 \operatorname{softmax}
 \left(
 \frac{\mathbf{z}}{\tau}
 \right),
-\]
+$$
 
 其中：
 
-- \(K=4\)；
-- \(\tau\) 为门控温度；
-- \(\pi_k\) 表示第 \(k\) 个专家对当前样本的贡献权重；
-- \(\sum_{k=1}^{K}\pi_k=1\)。
+- $K=4$；
+- $\tau$ 为门控温度；
+- $\pi_k$ 表示第 $k$ 个专家对当前样本的贡献权重；
+- $\sum_{k=1}^{K}\pi_k=1$。
 
 较低的温度通常会使专家选择更尖锐，较高的温度则会产生更平滑的专家融合。当前默认值为：
 
-\[
+$$
 \tau=1.0.
-\]
+$$
 
 ---
 
 ### 4. 速度专家
 
-每个专家 \(F_{\psi_k}\) 都是一个轻量速度回归器：
+每个专家 $F_{\psi_k}$ 都是一个轻量速度回归器：
 
-\[
+$$
 \hat{\mathbf{v}}_k
 =
 F_{\psi_k}(\mathbf{h}),
 \qquad k=1,\dots,K.
-\]
+$$
 
 当前实现中，每个专家由以下结构组成：
 
@@ -141,12 +140,12 @@ Linear → GELU → Dropout → Linear
 
 最终速度预测由所有专家输出的加权和得到：
 
-\[
+$$
 \hat{\mathbf{v}}
 =
 \sum_{k=1}^{K}
 \pi_k\hat{\mathbf{v}}_k.
-\]
+$$
 
 软融合允许模型在运动边界和复杂状态中同时利用多个专家，而不是强制选择唯一专家。
 
@@ -158,15 +157,15 @@ Linear → GELU → Dropout → Linear
 
 定义水平速度大小：
 
-\[
+$$
 s
 =
 \sqrt{v_x^2+v_y^2},
-\]
+$$
 
 定义当前窗口的平均偏航角速度幅值：
 
-\[
+$$
 r
 =
 \left|
@@ -174,15 +173,15 @@ r
 \sum_{t=1}^{T}
 \omega_z(t)
 \right|.
-\]
+$$
 
 当前原型使用四种运动模式：
 
 | 标签 | 运动模式 | 当前规则 |
 | --- | --- | --- |
-| 0 | 静止 | \(s < 0.10\) |
-| 1 | 直行 | \(s \ge 0.50\) 且 \(r \le 0.10\) |
-| 2 | 转向 | \(s \ge 0.50\) 且 \(r > 0.10\) |
+| 0 | 静止 | $s < 0.10$ |
+| 1 | 直行 | $s \ge 0.50$ 且 $r \le 0.10$ |
+| 2 | 转向 | $s \ge 0.50$ 且 $r > 0.10$ |
 | 3 | 过渡 | 其他情况 |
 
 这里的阈值只是当前原型默认值，不应被视为适用于所有数据集的固定常数。不同设备采样率、坐标系、单位和数据分布可能需要重新标定。
@@ -195,7 +194,7 @@ r
 
 模型的总体训练目标由速度回归损失、门控模式分类损失和专家负载均衡损失组成：
 
-\[
+$$
 \mathcal{L}
 =
 \mathcal{L}_{\mathrm{vel}}
@@ -205,11 +204,11 @@ r
 +
 \lambda_{\mathrm{bal}}
 \mathcal{L}_{\mathrm{bal}}.
-\]
+$$
 
 #### 速度回归损失
 
-\[
+$$
 \mathcal{L}_{\mathrm{vel}}
 =
 \ell
@@ -217,13 +216,13 @@ r
 \hat{\mathbf{v}},
 \mathbf{v}
 \right),
-\]
+$$
 
 其中具体回归损失由外部训练框架决定，例如 MSE、Huber Loss 或其他惯性里程计训练目标。当前模型文件本身不固定该部分实现。
 
 #### 门控模式分类损失
 
-\[
+$$
 \mathcal{L}_{\mathrm{mode}}
 =
 \operatorname{CE}
@@ -231,25 +230,25 @@ r
 \mathbf{z},
 y_{\mathrm{mode}}
 \right),
-\]
+$$
 
-其中 \(y_{\mathrm{mode}}\) 为规则生成的运动模式伪标签。该损失为门控网络提供弱监督，使专家分工与可解释运动模式建立联系。
+其中 $y_{\mathrm{mode}}$ 为规则生成的运动模式伪标签。该损失为门控网络提供弱监督，使专家分工与可解释运动模式建立联系。
 
 #### 负载均衡损失
 
 记一个批次内的平均门控权重为：
 
-\[
+$$
 \bar{\boldsymbol{\pi}}
 =
 \frac{1}{B}
 \sum_{i=1}^{B}
 \boldsymbol{\pi}^{(i)},
-\]
+$$
 
 则负载均衡目标为：
 
-\[
+$$
 \mathcal{L}_{\mathrm{bal}}
 =
 \operatorname{MSE}
@@ -257,17 +256,17 @@ y_{\mathrm{mode}}
 \bar{\boldsymbol{\pi}},
 \frac{1}{K}\mathbf{1}
 \right).
-\]
+$$
 
 该正则项用于防止训练早期所有样本都被分配给同一个或少数几个专家。
 
 当前默认权重为：
 
-\[
+$$
 \lambda_{\mathrm{mode}}=0.1,
 \qquad
 \lambda_{\mathrm{bal}}=0.01.
-\]
+$$
 
 模型通过 `aux_loss` 暴露两项辅助损失的加权和，外部训练流程需要将其加入主速度回归损失。
 
@@ -277,7 +276,7 @@ y_{\mathrm{mode}}
 
 推理阶段只需要 IMU 窗口：
 
-\[
+$$
 \mathbf{X}
 \rightarrow
 E_{\theta}
@@ -287,7 +286,7 @@ G_{\phi}
 \{F_{\psi_k}\}_{k=1}^{K}
 \rightarrow
 \hat{\mathbf{v}}.
-\]
+$$
 
 不再需要：
 
@@ -297,127 +296,6 @@ G_{\phi}
 - 人工指定专家。
 
 这意味着规则只是训练阶段的辅助归纳偏置，而不是部署阶段的必要组成部分。
-
----
-
-## 方法流程
-
-```mermaid
-flowchart LR
-    X[IMU Window] --> E[Shared 1D Residual Encoder]
-    E --> H[Motion Feature]
-    H --> G[Mode Gate]
-    H --> E0[Static Expert]
-    H --> E1[Straight Expert]
-    H --> E2[Turning Expert]
-    H --> E3[Transient Expert]
-    G --> W[Soft Gate Weights]
-    E0 --> F[Weighted Fusion]
-    E1 --> F
-    E2 --> F
-    E3 --> F
-    W --> F
-    F --> V[Velocity Prediction]
-
-    T[Target Velocity<br/>Training Only] --> R[Pseudo-Mode Rules]
-    X --> R
-    R --> M[Mode Classification Loss]
-    G --> M
-```
-
----
-
-## 当前实现
-
-### 网络入口
-
-```python
-ModeMoEIO(
-    input_dim,
-    output_dim,
-    group_sizes=(2, 2, 2, 2),
-    mode_count=4,
-    gate_temperature=1.0,
-    mode_loss_weight=0.1,
-    balance_loss_weight=0.01,
-    gate_hidden_dim=128,
-    expert_hidden_dim=128,
-    dropout=0.1,
-)
-```
-
-### 输入输出
-
-| 项目 | 张量形状 | 说明 |
-| --- | --- | --- |
-| IMU 输入 | `(B, 6, T)` | 固定长度惯性窗口 |
-| 目标速度 | `(B, 3)` | 仅训练阶段用于主损失和伪标签 |
-| 预测速度 | `(B, 3)` | 专家软融合后的速度预测 |
-| 门控权重 | `(B, 4)` | 保存在 `last_gate` |
-| 模式伪标签 | `(B,)` | 训练阶段保存在 `last_mode_label` |
-
-### 训练示例
-
-```python
-model.train()
-
-prediction = model(imu_window, target=target_velocity)
-velocity_loss = criterion(prediction, target_velocity)
-
-loss = velocity_loss
-if model.aux_loss is not None:
-    loss = loss + model.aux_loss
-
-optimizer.zero_grad()
-loss.backward()
-optimizer.step()
-```
-
-### 推理示例
-
-```python
-model.eval()
-
-with torch.no_grad():
-    prediction = model(imu_window)
-    gate_weights = model.last_gate
-```
-
----
-
-## 仓库结构
-
-建议仓库采用以下结构：
-
-```text
-moe-io/
-├── README.md
-├── model/
-│   ├── model.py
-│   └── mode_rules.py
-├── configs/
-│   └── default.yaml
-├── scripts/
-│   ├── train.py
-│   └── evaluate.py
-├── docs/
-│   └── figures/
-├── results/
-│   └── README.md
-├── CITATION.cff
-├── requirements.txt
-└── LICENSE
-```
-
-当前已提供的核心文件：
-
-```text
-model.py        # 共享编码器、门控网络、四个速度专家与辅助损失
-mode_rules.py   # 静止、直行、转向、过渡四类伪标签规则
-```
-
-> [!NOTE]
-> 当前 `model.py` 依赖现有工程中的 `RoNIN.model.model_resnet1d.BasicBlock1D`，因此仅复制这两个文件并不能构成完全独立的可运行项目。后续建议将 `BasicBlock1D` 一并整理进仓库，或者在 README 中明确依赖的上游工程与安装方式。
 
 ---
 
@@ -615,59 +493,5 @@ GitHub Commit、Tag 和 Release 所记录的公开时间，构成本项目研究
 }
 ```
 
-如后续发布论文，请优先引用正式论文，并将本节替换为论文对应的 BibTeX。
-
-### 推荐引用文字
-
-```text
-BUG423. ModeMoEIO: Motion-Mode-Conditioned Mixture-of-Experts for
-Learning-based Inertial Odometry. Early-stage research prototype, 2026.
-https://github.com/BUG423/moe-io
-```
-
----
-
-## 使用与贡献
-
-欢迎围绕以下方向提出 Issue 或 Pull Request：
-
-- 复现实验；
-- 数据集适配；
-- 模式规则改进；
-- 门控与专家结构设计；
-- 消融实验；
-- 相关工作补充；
-- 代码独立封装；
-- 文档修正。
-
-在提交实验结果时，请同时提供：
-
-- 数据集与划分；
-- 输入通道顺序；
-- 采样率；
-- 训练配置；
-- 随机种子；
-- 评价脚本；
-- 模型 Commit；
-- 完整指标而非仅报告最佳结果。
-
----
-
-## License
-
-> **TODO：请选择并添加适合本项目的开源许可证。**
-
-在许可证确定之前，不建议默认假设代码可以被任意复制、修改或商业使用。若希望鼓励学术复现，常见选择包括宽松型软件许可证；若模型或代码依赖其他项目，还需要确认上游许可证是否兼容。
-
----
-
-## Acknowledgements
-
-- [PaperFlow](https://github.com/BUG423/paperflow)：用于早期研究构想整理和实验规划。
-- RoNIN-style 1D residual encoder：当前原型使用现有工程中的 `BasicBlock1D` 实现。
-
----
-
-## Contact
 
 如需讨论该方法、复现实验或引用信息，请通过本仓库的 Issues 与维护者联系。
