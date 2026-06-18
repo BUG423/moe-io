@@ -2,6 +2,8 @@
 
 **ModeMoEIO: Motion-Mode-Conditioned Mixture-of-Experts for Learning-Based Inertial Odometry**
 
+**[中文](README.md) | [English](README.en.md)**
+
 **作者：BUG423**  
 **状态：初步公开稿 / Working Paper**  
 **版本：v0.1.0**
@@ -95,10 +97,7 @@ $$
 本文认为，真实映射更适合表示为多个运动模式条件函数的组合：
 
 $$
-\hat{\mathbf{v}}
-=
-\sum_{k=1}^{K}
-\pi_k(\mathbf{X})F_k(\mathbf{X}),
+\hat{\mathbf{v}} = \sum_{k=1}^{K} \pi_k(\mathbf{X})F_k(\mathbf{X}),
 $$
 
 其中 $K$ 为专家数量，$F_k$ 表示第 $k$ 个运动专家，$\pi_k$ 表示由门控网络产生的专家权重。
@@ -136,21 +135,13 @@ $$
 定义水平速度大小：
 
 $$
-s
-=
-\sqrt{v_x^2+v_y^2},
+s = \sqrt{v_x^2+v_y^2},
 $$
 
 定义窗口平均偏航角速度幅值：
 
 $$
-r
-=
-\left|
-\frac{1}{T}
-\sum_{t=1}^{T}
-\omega_z(t)
-\right|.
+r = \left| \frac{1}{T} \sum_{t=1}^{T} \omega_z(t) \right|.
 $$
 
 本文将基础运动状态划分为四类：
@@ -181,12 +172,7 @@ $$
 其中 $G_{\phi}$ 为参数为 $\phi$ 的门控函数。随后通过带温度参数的 Softmax 得到专家权重：
 
 $$
-\boldsymbol{\pi}
-=
-\operatorname{softmax}
-\left(
-\frac{\mathbf{z}}{\tau}
-\right),
+\boldsymbol{\pi} = \operatorname{softmax} \left( \frac{\mathbf{z}}{\tau} \right),
 $$
 
 其中：
@@ -202,20 +188,13 @@ $$
 对于每个专家 $F_{\psi_k}$，其输入均为共享特征 $\mathbf{h}$：
 
 $$
-\hat{\mathbf{v}}_k
-=
-F_{\psi_k}(\mathbf{h}),
-\qquad
-k=1,\dots,K.
+\hat{\mathbf{v}}_k = F_{\psi_k}(\mathbf{h}), \qquad k=1,\dots,K.
 $$
 
 不同专家具有相同的函数形式但参数独立。最终速度预测为：
 
 $$
-\hat{\mathbf{v}}
-=
-\sum_{k=1}^{K}
-\pi_k\hat{\mathbf{v}}_k.
+\hat{\mathbf{v}} = \sum_{k=1}^{K} \pi_k\hat{\mathbf{v}}_k.
 $$
 
 在训练过程中，门控分类监督倾向于将不同运动状态分配给相应专家，而主速度回归目标则迫使各专家在其高权重区域内提高预测精度。二者共同作用，使专家逐渐形成面向不同运动模式的局部回归能力。
@@ -225,13 +204,7 @@ $$
 整体训练目标由速度回归损失、运动模式门控损失和负载均衡损失组成：
 
 $$
-\mathcal{L}
-=
-\mathcal{L}_{\mathrm{vel}}
-+
-\lambda_{\mathrm{mode}}\mathcal{L}_{\mathrm{mode}}
-+
-\lambda_{\mathrm{bal}}\mathcal{L}_{\mathrm{bal}}.
+\mathcal{L} = \mathcal{L}_{\mathrm{vel}} + \lambda_{\mathrm{mode}}\mathcal{L}_{\mathrm{mode}} + \lambda_{\mathrm{bal}}\mathcal{L}_{\mathrm{bal}}.
 $$
 
 #### 3.7.1 速度回归损失
@@ -239,13 +212,7 @@ $$
 速度回归损失衡量最终融合预测与真实速度之间的差异：
 
 $$
-\mathcal{L}_{\mathrm{vel}}
-=
-\ell
-\left(
-\hat{\mathbf{v}},
-\mathbf{v}
-\right).
+\mathcal{L}_{\mathrm{vel}} = \ell \left( \hat{\mathbf{v}}, \mathbf{v} \right).
 $$
 
 其中 $\ell$ 可以根据具体训练设置采用均方误差、平滑 $L_1$ 损失或其他适合速度回归的目标函数。
@@ -255,13 +222,7 @@ $$
 门控网络通过交叉熵学习训练期伪标签：
 
 $$
-\mathcal{L}_{\mathrm{mode}}
-=
-\operatorname{CE}
-\left(
-\mathbf{z},
-y_{\mathrm{mode}}
-\right).
+\mathcal{L}_{\mathrm{mode}} = \operatorname{CE} \left( \mathbf{z}, y_{\mathrm{mode}} \right).
 $$
 
 该损失并不要求运动模式规则完全描述真实动力学，而是提供一个具有物理可解释性的初始划分，使专家分工不必完全依赖无约束的自发竞争。
@@ -271,23 +232,13 @@ $$
 记一个训练批次内的平均门控权重为：
 
 $$
-\bar{\boldsymbol{\pi}}
-=
-\frac{1}{B}
-\sum_{i=1}^{B}
-\boldsymbol{\pi}^{(i)}.
+\bar{\boldsymbol{\pi}} = \frac{1}{B} \sum_{i=1}^{B} \boldsymbol{\pi}^{(i)}.
 $$
 
 理想情况下，不同专家在训练过程中均应获得足够样本。本文使用均匀分布作为基础均衡目标：
 
 $$
-\mathcal{L}_{\mathrm{bal}}
-=
-\left\|
-\bar{\boldsymbol{\pi}}
--
-\frac{1}{K}\mathbf{1}
-\right\|_2^2.
+\mathcal{L}_{\mathrm{bal}} = \left\| \bar{\boldsymbol{\pi}} - \frac{1}{K}\mathbf{1} \right\|_2^2.
 $$
 
 该项主要用于缓解训练早期门控集中到少数专家的现象。需要指出的是，真实运动模式分布未必均匀，因此均衡损失只作为较弱正则项，而不应压制由数据产生的合理专家偏好。
@@ -297,15 +248,7 @@ $$
 推理阶段仅输入 IMU 窗口。模型首先生成共享特征，再根据特征计算门控权重，并融合全部专家输出：
 
 $$
-\mathbf{X}
-\rightarrow
-\mathbf{h}
-\rightarrow
-\boldsymbol{\pi}
-\rightarrow
-\{\hat{\mathbf{v}}_k\}_{k=1}^{K}
-\rightarrow
-\hat{\mathbf{v}}.
+\mathbf{X} \rightarrow \mathbf{h} \rightarrow \boldsymbol{\pi} \rightarrow \{\hat{\mathbf{v}}_k\}_{k=1}^{K} \rightarrow \hat{\mathbf{v}}.
 $$
 
 目标速度、运动模式规则和伪标签均不会参与部署阶段。因此，规则监督仅作为训练期归纳偏置，不构成实际系统运行的额外依赖。
